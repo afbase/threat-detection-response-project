@@ -1,0 +1,87 @@
+# Login stack: huginn-proxy (TLS + JA4) -> Login Web App -> Abuse Detection API.
+#
+#   ./scripts/setup.sh          # once: .env secrets + self-signed cert
+#   docker compose up --build
+#   open https://localhost:8443/login
+#
+# Only the proxy publishes a port. The Abuse Detection API is on an internal-only
+# network that the Login Web App alone can reach.
+
+name: tdr
+
+services:
+  # Renders the proxy config with the shared secret from .env (huginn-proxy has
+  # no env interpolation of its own).
+  proxy-config:
+    image: busybox:1.37
+    command:
+      - sh
+      - -c
+      - sed "s/__PROXY_SHARED_SECRET__/$$PROXY_SHARED_SECRET/" /template/huginn.toml.template > /rendered/huginn.toml
+    environment:
+      PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:?run ./scripts/setup.sh first}
+    volumes:
+      - ./proxy/huginn.toml.template:/template/huginn.toml.template:ro
+      - proxy-config:/rendered
+    network_mode: none
+
+  proxy:
+    # Build from the local copy instead with:
+    #   docker build --target plain -t huginn-proxy:local -f docker/proxy.Dockerfile ../huginn-proxy
+    #   HUGINN_IMAGE=huginn-proxy:local docker compose up
+    image: ${HUGINN_IMAGE:-ghcr.io/biandratti/huginn-proxy-plain:latest}
+    command: ["/usr/local/bin/huginn-proxy"]
+    environment:
+      HUGINN_CONFIG_PATH: /config/rendered/huginn.toml
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - proxy-config:/config/rendered:ro
+      - ./proxy/certs:/config/certs:ro
+    ports:
+      - "127.0.0.1:8443:7000"
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck", "127.0.0.1:9090", "/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    depends_on:
+      proxy-config:
+        condition: service_completed_successfully
+      login-app:
+        condition: service_healthy
+    networks: [edge]
+    restart: unless-stopped
+
+  login-app:
+    build: ./login-app
+    environment:
+      ABUSE_API_URL: http://abuse-detection-api:8001
+      ABUSE_API_VERSION: ${ABUSE_API_VERSION:-v2}
+      ABUSE_API_TOKEN: ${ABUSE_API_TOKEN:?run ./scripts/setup.sh first}
+      PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:?run ./scripts/setup.sh first}
+      SESSION_SECRET: ${SESSION_SECRET:?run ./scripts/setup.sh first}
+    depends_on:
+      abuse-detection-api:
+        condition: service_healthy
+    networks: [edge, internal]
+    restart: unless-stopped
+
+  abuse-detection-api:
+    build: ./abuse-detection-api
+    environment:
+      ABUSE_API_TOKEN: ${ABUSE_API_TOKEN:?run ./scripts/setup.sh first}
+      PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:?run ./scripts/setup.sh first}
+      # Velocity window kept in memory; hard-capped at 3600s by the service.
+      RETENTION_SECONDS: 3600
+      JA4_DENYLIST: ${JA4_DENYLIST:-}
+    networks: [internal]
+    restart: unless-stopped
+
+volumes:
+  proxy-config:
+
+networks:
+  edge:
+  internal:
+    internal: true

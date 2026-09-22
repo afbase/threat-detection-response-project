@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Verification required{% endblock %}
+{% block content %}
+<h1>Additional verification required</h1>
+<p>We couldn't confirm it's you, {{ username }}. A second factor would be requested here (MFA is not implemented in this demo).</p>
+<a href="/login">Back to sign in</a>
+{% endblock %}

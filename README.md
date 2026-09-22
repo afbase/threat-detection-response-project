@@ -55,3 +55,53 @@ Once the Login app, Abuse Detection API, proxy, and observability stack is setup
 3. **Fingerprint evasion:** After early denies, the attacker rotates or spoofs JA4 fingerprints to look like different legitimate browsers while reusing the same IP or username pattern. Tests detection by IP/behavior when fingerprint-based detection is defeated.
 
 For each of the scenarios, we’ll run an incident response for each and go through a kaizen exercise.  
+---
+
+## Running the stack
+
+```
+huginn-proxy :8443 (TLS, JA4)  ──edge net──▶  login-app :8000  ──internal net──▶  abuse-detection-api :8001
+```
+
+```bash
+./scripts/setup.sh              # once: writes .env secrets + a self-signed cert in proxy/certs/
+docker compose up -d --build
+open https://localhost:8443/login   # demo users: alice / wonderland, bob / builder
+```
+
+Only the proxy publishes a port (`127.0.0.1:8443`). The Abuse Detection API sits on an internal-only network that only the Login Web App can reach.
+
+Both services are `uv` projects (`login-app/`, `abuse-detection-api/`). Run the tests with `uv run pytest` in either directory.
+
+### Trust boundary
+
+- **Proxy → Login Web App.** huginn-proxy terminates TLS, adds `x-tls-ja4*` / `x-http2-akamai` headers and adds `X-Huginn-Proxy-Secret: $PROXY_SHARED_SECRET`. Header `add` overwrites any client-supplied value, so clients can't forge the secret. The proxy also strips client-sent fingerprint headers and reports them in `x-fingerprint-spoofing-detected`.
+- **Login Web App → Abuse Detection API.** Every call needs `Authorization: Bearer $ABUSE_API_TOKEN`. The app forwards the proxy headers unchanged, and trusts `X-Forwarded-For` only when the proxy secret is valid.
+- **Abuse Detection API.** `/v2` uses fingerprint headers only when `X-Huginn-Proxy-Secret` matches (constant-time compare). Otherwise it ignores them, lists them in `fingerprint.ignored_headers`, and returns step-up with the reason `fingerprint_untrusted`.
+
+### Abuse Detection API
+
+`POST /v1/loginCheck` and `POST /v2/loginCheck` take:
+
+```json
+{"username": "alice", "ip": "203.0.113.7", "user_agent": "Mozilla/5.0 ...", "timestamp": "2026-09-21T12:00:00Z", "outcome": "fail"}
+```
+
+They return `{"decision": "allow" | "step-up" | "deny", "reason": "...", "signals": [...]}`. `/v2` also returns a `fingerprint` block. The criteria are documented at the top of `abuse-detection-api/src/abuse_detection_api/rules.py`. Every threshold can be overridden through env vars (for example `IP_FAILURES_5M_DENY=30`).
+
+The API has no database. For velocity rules it keeps a sliding window of recent events in process memory. The window is capped at **1 hour** (`RETENTION_SECONDS`, max 3600) and at a fixed number of keys, and it is lost on restart. The API runs as a single worker so that every call sees the same window.
+
+### Login Web App
+
+| Route | Behavior |
+|---|---|
+| `GET /login` | Login form |
+| `POST /login` | Checks the password, then calls `/{ABUSE_API_VERSION}/loginCheck` (default `v2`). allow + correct password → 302 `/success` with a signed session cookie. Wrong password → 401. step-up → 401 with a verification page (MFA is stubbed). deny → 403. If the Abuse Detection API is unreachable, the result is step-up (fail safe). |
+| `GET /success` | Needs a valid session, otherwise 302 to `/login` |
+
+To build the proxy from the local copy instead of pulling the GHCR image:
+
+```bash
+docker build --target plain -t huginn-proxy:local -f docker/proxy.Dockerfile ../huginn-proxy
+HUGINN_IMAGE=huginn-proxy:local docker compose up -d
+```

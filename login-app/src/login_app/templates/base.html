@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sign in{% endblock %}</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f4f5f7; --card: #fff; --fg: #1d2330; --muted: #5d6677; --accent: #2f5bd3; --err: #b3261e; --line: #d9dde5; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #14171d; --card: #1e222a; --fg: #e7e9ee; --muted: #9aa3b2; --accent: #7fa2ff; --err: #ff8a80; --line: #333946; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, sans-serif; padding: 16px; }
+    main { width: 100%; max-width: 360px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 28px; }
+    h1 { font-size: 1.35rem; margin: 0 0 18px; }
+    label { display: block; font-size: .9rem; color: var(--muted); margin: 12px 0 4px; }
+    input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; font: inherit; }
+    button { width: 100%; margin-top: 20px; padding: 10px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    .error { color: var(--err); margin: 0 0 8px; }
+    p { color: var(--muted); }
+  </style>
+</head>
+<body><main>{% block content %}{% endblock %}</main></body>
+</html>

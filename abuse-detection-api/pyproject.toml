@@ -1,0 +1,27 @@
+[project]
+name = "abuse-detection-api"
+version = "0.1.0"
+description = "Internal abuse detection API: allow / step-up / deny decisions for login attempts"
+readme = "README.md"
+authors = [
+    { name = "Clinton Bowen", email = "clinton.bowen@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.141.1",
+    "pydantic>=2.13.5",
+    "uvicorn[standard]>=0.53.0",
+]
+
+[project.scripts]
+abuse-detection-api = "abuse_detection_api:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+]
