@@ -17,7 +17,7 @@ With Python and FastAPI, you'll create the user-facing Login Web App. It should 
 
 1. GET /login: Login page  
 2. POST /login: passes the username and password, then calls the Abuse Detection API to decide allow, step-up, or deny  
-3. GET /success: If /login succeeds, 302 to this page
+3. GET /success: If /login succeeds and Abuse Detection API decides allow, 302 to this page.  If Abuse Detection API chooses "step-up" for a successful username and password entry, then route to a an MFA page (e.g. /mfa).
 
 The Login Web App sits behind huginn-proxy and forwards the TLS fingerprint headers it receives to the Abuse Detection API on each call.
 
@@ -25,7 +25,7 @@ The Login Web App sits behind huginn-proxy and forwards the TLS fingerprint head
 
 With Python and FastAPI, you'll create an internal, stateless Abuse Detection API service. It should possess the following:
 
-1. POST /v1/loginCheck: Takes in a json containing (username, IP, user agent, timestamp, success or fail) and returns "allow", "step-up", or "deny" with a reason. Develop criteria for each.  
+1. POST /v1/loginCheck: Takes in a json containing (username, IP, user agent, timestamp, password success or fail, and `HMAC-SHA256($KEY, 0x01 | $PASSWORD | len($PASSWORD))`) and returns "allow", "step-up", or "deny" with a reason. Develop criteria for each.  
 2. POST /v2/loginCheck: same as v1 but also handles TLS [JA4 Fingerprinting](https://blog.foxio.io/ja4+-network-fingerprinting) from the proxy. You are to develop criteria for "allow", "step-up", or "deny" with a reason.
 
 This API should only trust fingerprint headers that come from the proxy, and should reject or ignore them from any other caller.
