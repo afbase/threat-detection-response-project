@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+httpx
+redis
+python-multipart
+# tests
+pytest
+fakeredis
