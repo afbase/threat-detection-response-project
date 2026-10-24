@@ -11,7 +11,17 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 ABUSE_API_URL = os.getenv("ABUSE_API_URL", "http://abuse_api:8001")
-FORWARD_HEADERS = ("x-ja4", "x-ja4-ts", "x-ja4-sig")  # passed through untouched
+
+# HEADERS           DESCRIPTION
+# x-tls-ja4 	    Sorted cipher suites and extensions, SHA-256 hashed (FoxIO JA4)
+# x-tls-ja4-r 	    Sorted, raw hex (JA4_r)
+# x-tls-ja4-o 	    Original ClientHello order, hashed (JA4_o)
+# x-tls-ja4-ro 	    Original order, raw hex (JA4_ro)
+# x-tls-ja4-s1 	    JA4_s1: session extensions excluded, sorted, hashed
+# x-tls-ja4-rs1 	JA4_s1 raw
+
+# TODO: fix the forwarded headers to the ones above ^^ note some of these may be redundant
+FORWARD_HEADERS = ("x-tls-ja4", "x-tls-ja4-ro", "x-tls-ja4-r")  # passed through untouched
 
 log = logging.getLogger("login_app")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
