@@ -31,7 +31,7 @@ def ev(user="alice", ip="10.0.0.1", ua="Mozilla/5.0", ok=False, ts=None):
 def signed(ja4, ts=None, key=api.PROXY_HMAC_KEY):
     ts = str(ts or time.time())
     sig = hmac.new(key, f"{ja4}|{ts}".encode(), hashlib.sha256).hexdigest()
-    return {"x-ja4": ja4, "x-ja4-ts": ts, "x-ja4-sig": sig}
+    return {"x-tls-ja4": ja4, "x-ja4-ts": ts, "x-ja4-sig": sig}
 
 
 def v1(**kw):
@@ -83,7 +83,7 @@ def test_clock_skew():
 
 # ---------- v2 trust boundary ----------
 def test_unsigned_fingerprint_ignored():
-    out = v2(headers={"x-ja4": "t13d_fake"}, ok=True)
+    out = v2(headers={"x-tls-ja4": "t13d_fake"}, ok=True)
     assert out["reason"].endswith("fingerprint_untrusted")
 
 
