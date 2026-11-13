@@ -131,6 +131,8 @@ def v2_rules(ev: LoginEvent, ja4: str, now: float) -> Verdict:
 
 # TODO: ignore signature derivation here - instead we want to look up the x-tls-ja4 header values
 # in the FoxIO database
+# https://github.com/Niicolaa/ja4db-export/tree/main/csv
+
 
 # ---------- trust: only accept proxy-signed fingerprints ----------
 def trusted_ja4(req: Request, now: float) -> Optional[str]:
