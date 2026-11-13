@@ -129,8 +129,6 @@ def v2_rules(ev: LoginEvent, ja4: str, now: float) -> Verdict:
             return Verdict(verdict="step_up", reason="ja4_new_for_user")
     return base
 
-# TODO: ignore signature derivation here - instead we want to look up the x-tls-ja4 header values
-# in the FoxIO database
 
 # ---------- trust: only accept proxy-signed fingerprints ----------
 def trusted_ja4(req: Request, now: float) -> Optional[str]:
