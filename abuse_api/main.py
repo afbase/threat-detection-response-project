@@ -21,7 +21,7 @@ SIG_MAX_AGE_S = 30
 CLOCK_SKEW_S = 300
 
 # Header names the proxy sets (adjust to match huginn-proxy config).
-H_JA4, H_TS, H_SIG = "x-ja4", "x-ja4-ts", "x-ja4-sig"
+H_JA4, H_TS, H_SIG = "x-tls-ja4", "x-ja4-ts", "x-ja4-sig"
 
 AUTOMATION_UA = ("python-requests", "curl", "go-http-client", "wget", "httpx", "aiohttp")
 JA4_DENYLIST: set[str] = set()  # load from FoxIO JA4+ DB later
@@ -129,6 +129,8 @@ def v2_rules(ev: LoginEvent, ja4: str, now: float) -> Verdict:
             return Verdict(verdict="step_up", reason="ja4_new_for_user")
     return base
 
+# TODO: ignore signature derivation here - instead we want to look up the x-tls-ja4 header values
+# in the FoxIO database
 
 # ---------- trust: only accept proxy-signed fingerprints ----------
 def trusted_ja4(req: Request, now: float) -> Optional[str]:
